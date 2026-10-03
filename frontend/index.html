@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI-SOC — AI-Powered Security Operations Centre</title>
+  <meta name="description" content="Autonomous AI-Powered Security Operations Centre with live telemetry feeds, ML threat classification, correlation, and MITRE ATT&CK triage." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="nav-brand">
+        <div class="brand-shield">
+          <span class="shield-icon">🛡️</span>
+          <span class="radar-ping"></span>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">AI-SOC <span class="badge-version">v2.0</span></div>
+          <div class="brand-subtitle">Autonomous Security Operations Center</div>
+        </div>
+      </div>
+
+      <div class="feed-controls-group">
+        <div class="feed-status-pill" id="feed-status-indicator">
+          <span class="status-pulse idle" id="status-pulse-dot"></span>
+          <span id="feed-status-text">Feed: Standby</span>
+        </div>
+
+        <button id="btn-toggle-feed" class="btn btn-primary">
+          <span id="feed-toggle-icon">▶</span> <span id="feed-toggle-label">Start Live Feed</span>
+        </button>
+        <button id="btn-feed-tick" class="btn btn-secondary" title="Manually poll 1 live batch now">
+          ⚡ Ingest Batch
+        </button>
+      </div>
+
+      <div class="nav-metrics">
+        <div class="nav-metric-item">
+          <span class="nav-metric-lbl">ACTIVE SOURCES</span>
+          <span class="nav-metric-val" id="top-active-sources">Replay Sim</span>
+        </div>
+        <div class="nav-metric-item">
+          <span class="nav-metric-lbl">PIPELINE LATENCY</span>
+          <span class="nav-metric-val text-cyan">~14ms</span>
+        </div>
+        <div class="nav-metric-item">
+          <span class="nav-metric-lbl">DB STORE</span>
+          <span class="nav-metric-val text-emerald">SQLite / Unified</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stat Summary Cards Row -->
+    <section class="metrics-grid">
+      <div class="metric-card glass-panel">
+        <div class="metric-card-header">
+          <span class="metric-title">TOTAL EVENTS INGESTED</span>
+          <span class="metric-badge badge-cyan">Canonical</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-number text-cyan" id="stat-total-events">0</span>
+          <span class="metric-subtext">Live & Historical</span>
+        </div>
+        <div class="metric-footer-bar">
+          <div class="mini-bar-fill cyan" style="width: 100%"></div>
+        </div>
+      </div>
+
+      <div class="metric-card glass-panel">
+        <div class="metric-card-header">
+          <span class="metric-title">CORRELATED INCIDENTS</span>
+          <span class="metric-badge badge-purple">M4 Engine</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-number text-purple" id="stat-total-incidents">0</span>
+          <span class="metric-subtext" id="stat-open-incidents">0 open alerts</span>
+        </div>
+        <div class="metric-footer-bar">
+          <div class="mini-bar-fill purple" style="width: 75%"></div>
+        </div>
+      </div>
+
+      <div class="metric-card glass-panel">
+        <div class="metric-card-header">
+          <span class="metric-title">CRITICAL SEVERITY</span>
+          <span class="metric-badge badge-rose">Urgent Action</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-number text-rose" id="stat-critical-count">0</span>
+          <span class="metric-subtext">Score ≥ 80 / 100</span>
+        </div>
+        <div class="metric-footer-bar">
+          <div class="mini-bar-fill rose" id="bar-critical-fill" style="width: 40%"></div>
+        </div>
+      </div>
+
+      <div class="metric-card glass-panel">
+        <div class="metric-card-header">
+          <span class="metric-title">HIGH & MEDIUM ALERTS</span>
+          <span class="metric-badge badge-amber">Investigation</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-number text-amber" id="stat-high-count">0</span>
+          <span class="metric-subtext" id="stat-medium-count">0 medium alerts</span>
+        </div>
+        <div class="metric-footer-bar">
+          <div class="mini-bar-fill amber" style="width: 60%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace Tabs Navigation -->
+    <nav class="workspace-tabs">
+      <button class="tab-btn active" data-tab="live-feed">
+        📡 Live Feed Telemetry Stream
+      </button>
+      <button class="tab-btn" data-tab="incident-triage">
+        🚨 Incident Triage & MITRE ATT&CK
+      </button>
+      <button class="tab-btn" data-tab="kb-feedback">
+        🧠 Continuous Learning & Feedback Loop
+      </button>
+      <button class="tab-btn" data-tab="data-sources">
+        📂 Data Sources & URL Scanner
+      </button>
+      <button class="tab-btn" data-tab="architecture">
+        🏗️ Pipeline & Source Architecture
+      </button>
+    </nav>
+
+    <!-- Tab 1: Live Feed Telemetry -->
+    <main class="tab-pane active" id="pane-live-feed">
+      <div class="live-feed-layout">
+        <!-- Telemetry Stream Left Side -->
+        <div class="glass-panel feed-stream-container">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="stream-beacon"></span>
+              <h3>Real-Time Live Telemetry Stream</h3>
+              <span class="stream-count-badge" id="stream-row-count">0 records</span>
+            </div>
+            <div class="panel-actions">
+              <span class="auto-scroll-indicator">Auto-refresh: 2.5s</span>
+              <button class="btn btn-sm btn-outline" id="btn-clear-feed">Clear View</button>
+            </div>
+          </div>
+
+          <div class="feed-table-scroll">
+            <table class="telemetry-table" id="telemetry-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Source Connector</th>
+                  <th>Source IP : Port</th>
+                  <th>Destination IP : Port</th>
+                  <th>Proto</th>
+                  <th>Threat Label (ML)</th>
+                  <th>Event ID</th>
+                </tr>
+              </thead>
+              <tbody id="telemetry-tbody">
+                <tr class="empty-row"><td colspan="7">Awaiting live feed ticks... Click "Start Live Feed" or "Ingest Batch" above.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Live Source Configuration & Architecture Card Right Side -->
+        <div class="glass-panel live-source-details">
+          <div class="panel-header">
+            <h3>Connected Ingestion Sources</h3>
+            <span class="badge-status-pill">Active</span>
+          </div>
+
+          <div class="connector-list">
+            <!-- Connector 1 -->
+            <div class="connector-card active">
+              <div class="connector-head">
+                <div class="connector-info">
+                  <span class="conn-dot green"></span>
+                  <strong>ReplaySimulator</strong>
+                  <span class="connector-badge">Stream Demo</span>
+                </div>
+                <span class="conn-status-tag">POLLING</span>
+              </div>
+              <p class="conn-desc">Streams network flows from <code>data/raw/cicids2017_sample.csv</code> at configurable intervals with cursor persistence.</p>
+              <div class="conn-specs">
+                <span>Batch: 10 rows/tick</span>
+                <span>Speed: 10x</span>
+                <span>Format: Flow CSV</span>
+              </div>
+            </div>
+
+            <!-- Connector 2 -->
+            <div class="connector-card">
+              <div class="connector-head">
+                <div class="connector-info">
+                  <span class="conn-dot yellow"></span>
+                  <strong>LocalLogTailConnector</strong>
+                  <span class="connector-badge">SIEM / EDR</span>
+                </div>
+                <span class="conn-status-tag">READY</span>
+              </div>
+              <p class="conn-desc">Tails local Wazuh/Suricata <code>eve.json</code> using persistent byte-offset tracking. Zero missed logs.</p>
+              <div class="conn-specs">
+                <span>Offset Seek: Enabled</span>
+                <span>Format: JSON Log</span>
+              </div>
+            </div>
+
+            <!-- Connector 3 -->
+            <div class="connector-card">
+              <div class="connector-head">
+                <div class="connector-info">
+                  <span class="conn-dot cyan"></span>
+                  <strong>Threat Intel (AbuseIPDB & VT)</strong>
+                  <span class="connector-badge">External API</span>
+                </div>
+                <span class="conn-status-tag">ENABLED</span>
+              </div>
+              <p class="conn-desc">Token-bucket rate-limited reputation check with exponential retry backoff (1s → 2s → 4s).</p>
+              <div class="conn-specs">
+                <span>Rate Limit: 4 req/min</span>
+                <span>Retry: 3 max</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="source-unified-banner">
+            <div class="unified-icon">⚡</div>
+            <div class="unified-text">
+              <strong>Unified Ingestion Guarantee:</strong>
+              <p>Files, live replay, SIEM logs, and threat intelligence streams are all mapped by <code>schema_mapper.py</code> into the same 17-column canonical contract before hitting SQLite & the ML pipeline.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 2: Incident Triage & MITRE ATT&CK -->
+    <main class="tab-pane" id="pane-incident-triage">
+      <div class="triage-layout">
+        <!-- Incidents List -->
+        <div class="glass-panel incidents-panel">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <h3>Security Incidents Board</h3>
+              <span class="stream-count-badge" id="incident-filter-count">Showing 0</span>
+            </div>
+            <div class="filter-pills" id="tier-filter-group">
+              <button class="filter-pill active" data-filter="all">All</button>
+              <button class="filter-pill filter-critical" data-filter="critical">Critical</button>
+              <button class="filter-pill filter-high" data-filter="high">High</button>
+              <button class="filter-pill filter-medium" data-filter="medium">Medium</button>
+              <button class="filter-pill filter-low" data-filter="low">Low</button>
+            </div>
+          </div>
+
+          <div class="incidents-list" id="incidents-container">
+            <div class="loading-state">Loading incident stream...</div>
+          </div>
+        </div>
+
+        <!-- Incident Investigation Drill-Down Detail -->
+        <div class="glass-panel incident-detail-panel" id="incident-detail-panel">
+          <div class="detail-placeholder" id="detail-empty-state">
+            <span class="placeholder-icon">🔍</span>
+            <h4>Select an incident from the board</h4>
+            <p>Click any incident card on the left to inspect AI-generated LLM triage narratives, MITRE ATT&CK techniques, risk score breakdown, and submit analyst feedback.</p>
+          </div>
+
+          <div class="detail-content hidden" id="detail-active-state">
+            <div class="detail-header">
+              <div class="detail-title-wrap">
+                <span class="tier-tag" id="detail-tier-badge">CRITICAL</span>
+                <h3 id="detail-incident-id">INCIDENT #---</h3>
+              </div>
+              <div class="risk-gauge-box">
+                <div class="risk-score-num" id="detail-risk-num">88.5</div>
+                <div class="risk-score-lbl">RISK SCORE</div>
+              </div>
+            </div>
+
+            <!-- AI Tier-2 Narrative Box -->
+            <div class="ai-narrative-box">
+              <div class="narrative-tag">
+                <span>🤖 AI NARRATIVE & MITIGATION (TIER-2 RAG)</span>
+              </div>
+              <p class="narrative-summary" id="detail-narrative-summary">
+                Analyzing incident details...
+              </p>
+              <div class="narrative-rationale">
+                <strong>Severity Rationale:</strong>
+                <p id="detail-narrative-rationale">---</p>
+              </div>
+              <div class="narrative-actions">
+                <strong>Recommended Containment Actions:</strong>
+                <ul id="detail-recommended-actions"></ul>
+              </div>
+            </div>
+
+            <!-- MITRE ATT&CK Tags -->
+            <div class="detail-section">
+              <div class="section-title">MITRE ATT&CK Techniques Mapped</div>
+              <div class="mitre-tags-list" id="detail-mitre-tags"></div>
+            </div>
+
+            <!-- Incident Metadata Grid -->
+            <div class="detail-meta-grid">
+              <div class="meta-item">
+                <span class="meta-lbl">ATTACKING HOST (SRC)</span>
+                <span class="meta-val font-mono text-rose" id="detail-src-ip">---</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">TARGET ASSET (DST)</span>
+                <span class="meta-val font-mono text-cyan" id="detail-dst-ip">---</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">FIRST DETECTED</span>
+                <span class="meta-val" id="detail-first-seen">---</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-lbl">CURRENT STATUS</span>
+                <span class="meta-val badge-status" id="detail-status">open</span>
+              </div>
+            </div>
+
+            <!-- Analyst Feedback Form -->
+            <div class="analyst-action-box">
+              <div class="section-title">Analyst Triage & Feedback Loop</div>
+              <p class="action-desc">Submitting feedback writes directly to the SOC database and enriches the Tier-2 Knowledge Base for future retraining:</p>
+              <div class="feedback-inputs">
+                <select id="feedback-verdict" class="feedback-select">
+                  <option value="confirmed_threat">Confirmed Threat (Begin Containment)</option>
+                  <option value="false_positive">False Positive (Suppress Similar)</option>
+                  <option value="needs_relabel">Misclassified (Needs Retraining Relabel)</option>
+                </select>
+                <input type="text" id="feedback-notes" class="feedback-notes" placeholder="Optional notes: e.g., Confirmed unauthorized port scan against gateway." />
+                <button id="btn-submit-feedback" class="btn btn-primary">Submit Verdict</button>
+              </div>
+              <div id="feedback-status-msg" class="feedback-status-msg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 3: Continuous Learning & Knowledge Base -->
+    <main class="tab-pane" id="pane-kb-feedback">
+      <div class="glass-panel kb-panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <h3>Self-Updating Knowledge Base & Feedback Audit</h3>
+            <span class="stream-count-badge" id="kb-row-count">0 items</span>
+          </div>
+          <button class="btn btn-sm btn-outline" id="btn-refresh-kb">Refresh KB</button>
+        </div>
+
+        <p class="kb-intro">
+          Every time an analyst reviews an incident and confirms or overrides a threat verdict, the decision is written as a permanent record in <code>analyst_feedback</code> and immediately ingested into the <code>knowledge_base_entries</code> RAG vector store.
+        </p>
+
+        <div class="kb-entries-grid" id="kb-entries-container">
+          <div class="loading-state">Loading knowledge base entries...</div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 4: Architecture & Workflow -->
+    <main class="tab-pane" id="pane-architecture">
+      <div class="glass-panel architecture-panel">
+        <div class="panel-header">
+          <h3>AI-SOC Architectural Data Pipeline</h3>
+          <span class="badge-status-pill">Fully Implemented</span>
+        </div>
+
+        <div class="arch-diagram">
+          <div class="arch-col">
+            <div class="arch-step-badge">STEP 1</div>
+            <h4>Ingestion & Live Feeds</h4>
+            <div class="arch-card">
+              <strong>Producers:</strong>
+              <ul>
+                <li>CSV / JSON / Syslog / PCAP files</li>
+                <li><code>ReplaySimulator</code> (continuous live replay)</li>
+                <li><code>LocalLogTailConnector</code> (Wazuh/Suricata)</li>
+                <li>Threat Intel (AbuseIPDB, OTX, VT)</li>
+              </ul>
+              <div class="arch-tag">Output: Canonical DataFrame</div>
+            </div>
+          </div>
+
+          <div class="arch-arrow">➔</div>
+
+          <div class="arch-col">
+            <div class="arch-step-badge">STEP 2</div>
+            <h4>ML Detection & Features</h4>
+            <div class="arch-card">
+              <strong>Tier-1 Engine:</strong>
+              <ul>
+                <li>Feature Encoder + SMOTE Balancer</li>
+                <li>XGBoost Multiclass Classifier</li>
+                <li>SHAP Explainer (Feature importance)</li>
+                <li>Confidence & Label assignment</li>
+              </ul>
+              <div class="arch-tag">Output: Scored Events Table</div>
+            </div>
+          </div>
+
+          <div class="arch-arrow">➔</div>
+
+          <div class="arch-col">
+            <div class="arch-step-badge">STEP 3</div>
+            <h4>Correlation & Risk</h4>
+            <div class="arch-card">
+              <strong>Module 4 Engine:</strong>
+              <ul>
+                <li>Sliding Window Deduplication (60s)</li>
+                <li>Correlation by attacking IP & target</li>
+                <li>Asset Criticality weighting (CIDR)</li>
+                <li>MITRE ATT&CK Framework Mapping</li>
+              </ul>
+              <div class="arch-tag">Output: Correlated Incidents</div>
+            </div>
+          </div>
+
+          <div class="arch-arrow">➔</div>
+
+          <div class="arch-col">
+            <div class="arch-step-badge">STEP 4</div>
+            <h4>Tier-2 LLM & Feedback</h4>
+            <div class="arch-card">
+              <strong>RAG & Continuous Loop:</strong>
+              <ul>
+                <li>AI Narrative generation & triage actions</li>
+                <li>FastAPI REST Layer</li>
+                <li>Analyst Feedback in SQLite / Postgres</li>
+                <li>Self-updating RAG Knowledge Base</li>
+              </ul>
+              <div class="arch-tag">System of Record: DB Tables</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 4: Data Sources — File Upload + URL Scanner -->
+    <main class="tab-pane" id="pane-data-sources">
+      <div class="data-sources-layout">
+
+        <!-- FILE UPLOAD PANEL -->
+        <div class="glass-panel ds-card">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="stream-beacon" style="background:var(--accent-emerald);box-shadow:0 0 10px var(--accent-emerald)"></span>
+              <h3>Upload Log / Data File</h3>
+            </div>
+            <span class="badge-status-pill" style="border-color:rgba(16,185,129,.4)">M1 Ingestion</span>
+          </div>
+
+          <div class="upload-dropzone" id="upload-dropzone">
+            <div class="dropzone-inner">
+              <span class="dz-icon">📁</span>
+              <p class="dz-title">Drag &amp; drop your log file here</p>
+              <p class="dz-sub">or click to browse · CSV, JSON, .log, syslog, .txt, .md, .xlsx</p>
+              <input type="file" id="upload-input" accept=".csv,.json,.log,.txt,.md,.xlsx,.syslog" hidden />
+              <button class="btn btn-primary" id="btn-upload-browse" style="margin-top:12px">Browse File</button>
+            </div>
+          </div>
+
+          <div class="upload-preview hidden" id="upload-preview">
+            <div class="preview-header">
+              <span class="preview-name" id="preview-filename">—</span>
+              <span class="preview-size" id="preview-filesize">—</span>
+            </div>
+            <button class="btn btn-primary" id="btn-upload-submit" style="width:100%;margin-top:12px">
+              🚀 Run Full Ingestion Pipeline
+            </button>
+            <div class="upload-progress-bar hidden" id="upload-progress-wrap">
+              <div class="upload-progress-inner" id="upload-progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="upload-result-box hidden" id="upload-result-box">
+            <div class="upload-result-icon" id="upload-result-icon">✓</div>
+            <div class="upload-result-text">
+              <div class="upload-result-title" id="upload-result-title">Success</div>
+              <div class="upload-result-desc" id="upload-result-desc">—</div>
+            </div>
+          </div>
+
+          <div class="upload-history-section">
+            <div class="section-title" style="margin-top:16px">Previously Uploaded Files</div>
+            <div class="upload-history-list" id="upload-history-list">
+              <div class="loading-state">Loading history…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- URL / HOST SCANNER PANEL -->
+        <div class="glass-panel ds-card">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="stream-beacon" style="background:var(--accent-rose);box-shadow:0 0 10px var(--accent-rose)"></span>
+              <h3>URL / Host Threat Scanner</h3>
+            </div>
+            <span class="badge-status-pill" style="color:var(--accent-rose);border-color:rgba(244,63,94,.4);background:rgba(244,63,94,.1)">Threat Intel</span>
+          </div>
+
+          <div class="scan-input-area">
+            <div class="scan-description">
+              Enter any <strong>URL, domain, hostname, or raw IP</strong> to run a threat-intelligence scan.
+              Matching events are automatically ingested into the pipeline and surface in Incident Triage.
+              <br><br>
+              <em>Try: <code>http://185.220.101.5</code> | <code>malware.testcategory.com</code> | your own suspect IP</em>
+            </div>
+            <div class="scan-input-row">
+              <input type="text" id="scan-url-input" class="scan-url-field"
+                placeholder="https://target.com or 203.0.113.88" />
+              <button class="btn btn-primary" id="btn-scan-url" style="white-space:nowrap">
+                🔍 Scan Target
+              </button>
+            </div>
+
+            <div class="scan-result-card hidden" id="scan-result-card">
+              <div class="scan-result-header">
+                <div style="flex:1;min-width:0">
+                  <div class="scan-target-label" id="scan-res-target">—</div>
+                  <div class="scan-source-tag" id="scan-res-source">—</div>
+                </div>
+                <div class="scan-score-box" id="scan-score-box">
+                  <div class="scan-score-num" id="scan-res-score">0</div>
+                  <div class="scan-score-lbl">RISK</div>
+                </div>
+              </div>
+
+              <div class="scan-result-grid">
+                <div class="scan-meta-item">
+                  <span class="scan-meta-lbl">RESOLVED IP</span>
+                  <span class="scan-meta-val font-mono" id="scan-res-ip">—</span>
+                </div>
+                <div class="scan-meta-item">
+                  <span class="scan-meta-lbl">VERDICT</span>
+                  <span class="scan-meta-val" id="scan-res-label">—</span>
+                </div>
+                <div class="scan-meta-item">
+                  <span class="scan-meta-lbl">CONFIDENCE</span>
+                  <span class="scan-meta-val" id="scan-res-conf">—</span>
+                </div>
+                <div class="scan-meta-item">
+                  <span class="scan-meta-lbl">INTEL SOURCE</span>
+                  <span class="scan-meta-val" id="scan-res-src">—</span>
+                </div>
+              </div>
+
+              <div class="scan-flags-row" id="scan-flags-container"></div>
+
+              <div class="scan-incident-notice hidden" id="scan-incident-notice">
+                🚨 Threat event ingested — check <strong>Incident Triage</strong> for the correlated incident.
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-top:20px">Recent Scan History</div>
+          <div class="scan-history-list" id="scan-history-list">
+            <div class="loading-state">No scans performed yet…</div>
+          </div>
+        </div>
+
+        <!-- REMOTE URL INGESTION / LIVE POLLING PANEL -->
+        <div class="glass-panel ds-card url-feed-card">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="stream-beacon"></span>
+              <h3>Remote URL Data Source</h3>
+            </div>
+            <span class="badge-status-pill">JSON / CSV</span>
+          </div>
+          <div class="url-feed-content">
+            <p class="scan-description">Import a public JSON, NDJSON, or CSV URL once, or register it as a polling feed. Each batch follows the same canonical ingestion and correlation path shown on this dashboard.</p>
+            <input type="url" id="url-source-input" class="scan-url-field" placeholder="https://example.org/security-events.json" />
+            <div class="url-feed-options">
+              <input type="text" id="url-source-name" class="scan-url-field" placeholder="Optional source name" maxlength="80" />
+              <label class="interval-label">Poll every <input type="number" id="url-source-interval" min="2" max="3600" value="10" /> seconds</label>
+            </div>
+            <div class="url-feed-actions">
+              <button class="btn btn-secondary" id="btn-url-import">Import once</button>
+              <button class="btn btn-primary" id="btn-url-live">▶ Add live feed</button>
+            </div>
+            <div class="source-status-msg" id="url-source-status" aria-live="polite"></div>
+          </div>
+          <div class="url-source-list-wrap">
+            <div class="section-title">Configured URL feeds</div>
+            <div class="url-source-list" id="url-source-list"><div class="loading-state">No URL feeds configured.</div></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

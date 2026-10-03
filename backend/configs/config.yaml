@@ -1,0 +1,89 @@
+# =============================================================================
+# AI-SOC Configuration
+# =============================================================================
+# API keys are NEVER stored here — only the environment variable *names*.
+# Actual key values go in .env (which is gitignored).
+# =============================================================================
+
+ingestion:
+  input_dir: "data/raw"
+  output_dir: "data/processed"
+
+# DATABASE_URL overrides this local-safe default. PostgreSQL can be adopted
+# without application changes by setting DATABASE_URL to a PostgreSQL URL.
+database:
+  driver: "sqlite"
+  url_env: "DATABASE_URL"
+  sqlite_path: "data/ai_soc.db"
+
+correlation:
+  dedup_window_seconds: 60
+  incident_window_seconds: 300
+  dedup_key_columns: ["src_ip", "dst_ip", "dst_port", "predicted_label"]
+  risk_tiers: { critical: 80, high: 60, medium: 35 }
+  asset_criticality_path: "configs/asset_criticality.yaml"
+
+feedback_loop:
+  kb_update:
+    poll_interval_seconds: 60
+  retrain:
+    trigger_mode: "threshold_or_schedule"
+    feedback_row_threshold: 50
+
+tier2:
+  llm:
+    base_url: "http://localhost:1234/v1/chat/completions"
+    model_name: "local-model"
+    timeout_seconds: 30
+    max_tokens: 512
+    temperature: 0.2
+  llm_tiers: ["critical", "high"]
+  retrieval:
+    embedding_model: "all-MiniLM-L6-v2"
+    top_k: 5
+  index_dir: "data/rag_index"
+
+api:
+  cors_allow_origins: ["http://localhost:5173"]
+  host: "0.0.0.0"
+  port: 8000
+
+live_feeds:
+
+  replay_simulator:
+    enabled: true
+    # Path to a processed parquet OR a raw CICIDS2017/NSL-KDD CSV
+    dataset_path: "data/raw/cicids2017_sample.csv"
+    emit_batch_size: 10        # rows returned per poll()
+    interval_seconds: 2        # scheduler sleep between ticks
+    speed_multiplier: 10       # cursor advances batch_size * multiplier rows
+
+  threat_intel:
+    abuseipdb:
+      enabled: false
+      api_key_env: "ABUSEIPDB_API_KEY"   # set this in .env
+
+    virustotal:
+      enabled: false
+      api_key_env: "VIRUSTOTAL_API_KEY"  # set this in .env
+      requests_per_minute: 4             # free-tier hard limit
+
+    misp:
+      enabled: false
+      base_url_env: "MISP_BASE_URL"      # e.g. https://localhost
+      api_key_env: "MISP_API_KEY"
+      verify_ssl: false                  # set true for production
+
+    otx:
+      enabled: false
+      api_key_env: "OTX_API_KEY"
+      poll_interval_seconds: 600
+
+  siem:
+    # Wazuh alerts file — only relevant if Wazuh is installed locally
+    wazuh_alerts_path: "C:/wazuh/logs/alerts/alerts.json"
+    enabled: false
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"

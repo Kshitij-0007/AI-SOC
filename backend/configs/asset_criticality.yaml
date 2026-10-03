@@ -1,0 +1,8 @@
+# Asset criticality definitions for AI-SOC risk scoring
+# Values between 0.1 (low importance) and 1.0 (mission critical)
+"10.0.0.1/32": 1.0     # Domain Controller / Core Gateway
+"10.0.0.5/32": 0.95    # Production Web Server
+"10.0.0.8/32": 0.9     # Database Server
+"10.0.0.0/24": 0.8     # Server Subnet
+"192.168.1.0/24": 0.4  # Workstation Subnet
+default: 0.3           # External / Unknown Assets

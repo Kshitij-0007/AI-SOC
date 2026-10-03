@@ -1,0 +1,47 @@
+# --- Virtual environments ---
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+
+# --- IDE / tool internals ---
+.http-forge/
+.agents/
+.gemini/
+
+# --- Python cache ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# --- Build / dist ---
+*.egg-info/
+dist/
+build/
+
+# --- Data & model artefacts (large files) ---
+backend/data/processed/
+backend/models/*.pkl
+backend/models/*.joblib
+backend/models/*.bin
+
+# --- Environment secrets ---
+.env
+backend/.env
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+Markdown
+Markdown_Output
+node_modules
+feature_store
+.env
+.pytest_cache
+tests
+ai_soc.db
